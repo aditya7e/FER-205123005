@@ -19,18 +19,23 @@ export default function App() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/weights/';
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-        console.log("Models loaded successfully");
-      } catch (error) {
-        console.error('Error loading models:', error);
-      }
+    const startVideo = () => {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => console.error('Error getting video stream:', err));
     };
 
-    loadModels();
+    const loadModels = async () => {
+      const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/weights/';
+      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+    };
+
+    loadModels().then(startVideo);
   }, []);
 
   useEffect(() => {
@@ -75,7 +80,7 @@ export default function App() {
       return () => clearInterval(interval);
     };
 
-    if (isVideoPlaying && videoRef.current) {
+    if (videoRef.current) {
       videoRef.current.addEventListener('play', handleVideoPlay);
     }
 
@@ -84,42 +89,27 @@ export default function App() {
         videoRef.current.removeEventListener('play', handleVideoPlay);
       }
     };
-  }, [isVideoPlaying]);
+  }, []);
 
   const handleVideoToggle = () => {
     if (isVideoPlaying) {
       setIsVideoPlaying(false);
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject;
-        const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop()); 
-        videoRef.current.srcObject = null; 
-        console.log("Video feed stopped");
-      }
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
     } else {
       setIsVideoPlaying(true);
-      navigator.mediaDevices.getUserMedia({ video: {} })
-        .then(stream => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            console.log("Video feed started");
-          }
-        })
-        .catch(err => {
-          console.error("Error starting video feed:", err);
-        });
+      navigator.mediaDevices.getUserMedia({ video: {} }).then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
     }
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-black text-white">
-      <header className="w-full mb-6 flex items-center justify-between bg-gray-800 text-white p-6 shadow-lg">
-        <div className="flex-1 flex justify-center">
-          <h1 className="text-4xl font-extrabold">Facial Expression Recognition</h1>
-        </div>
-        <button className="bg-yellow-500 px-6 py-3 rounded-full text-lg hover:bg-yellow-400 transition duration-300 transform hover:scale-105">
-          About
-        </button>
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
+      <header className="w-full mb-6 flex items-center justify-between bg-indigo-600 text-white p-4 rounded-lg shadow-lg">
+        <h1 className="text-3xl font-semibold">Facial Expression Recognition</h1>
+        <button className="bg-yellow-500 px-4 py-2 rounded-lg hover:bg-yellow-400 transition duration-300">About</button>
       </header>
 
       <div className="flex flex-col items-center w-full space-y-6">
@@ -128,7 +118,7 @@ export default function App() {
           <canvas ref={canvasRef} className="absolute top-0 left-0 rounded-lg" />
         </div>
 
-        <div className="bg-gray-800 shadow-lg rounded-lg p-6 w-full max-w-sm">
+        <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-sm">
           <h3 className="text-xl font-medium mb-4">Current Expression:</h3>
           <div className="flex items-center justify-center text-4xl">
             <span>{expressions}</span> 
@@ -136,19 +126,8 @@ export default function App() {
           </div>
         </div>
 
-        <button
-          className="bg-yellow-500 hover:bg-yellow-400 text-white px-6 py-3 rounded-lg transition duration-300 w-full max-w-xs"
-          onClick={handleVideoToggle}
-        >
-          {isVideoPlaying ? 'Stop Video Feed' : 'Start Video Feed'}
-        </button>
+        
       </div>
-
-      <footer className="bg-white text-black p-6 mt-8 w-full text-center">
-        <p className="text-lg">Made by Aditya</p>
-        <div className="flex justify-center space-x-6 mt-4">
-        </div>
-      </footer>
     </div>
   );
 }
